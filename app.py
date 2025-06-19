@@ -83,6 +83,44 @@ def unique_values():
     })
 
 
+@app.route("/FilterByValueAndYear")
+def filter_by_value_and_year():
+    global traffic_df
+
+    # Get query parameters
+    col_name = request.args.get("ColumnName")
+    col_value = request.args.get("ColumnValue")
+    year = request.args.get("Year")
+
+    # Validate input
+    if not col_name or not col_value or not year:
+        return jsonify({"error": "Missing one or more required parameters: ColumnName, ColumnValue, Year"}), 400
+
+    if col_name not in traffic_df.columns:
+        return jsonify({"error": f"Column '{col_name}' not found in dataset."}), 404
+
+    try:
+        year = int(year)
+    except ValueError:
+        return jsonify({"error": "Year must be a valid number."}), 400
+
+    # Ensure Published Date is in datetime format
+    traffic_df['Published Date'] = pd.to_datetime(traffic_df['Published Date'], errors='coerce')
+
+    # Filter the data
+    filtered = traffic_df[
+        (traffic_df[col_name] == col_value) &
+        (traffic_df['Published Date'].dt.year == year)
+    ]
+
+    # Return matching incidents as JSON
+    return jsonify({
+        "column": col_name,
+        "value": col_value,
+        "year": year,
+        "match_count": len(filtered),
+        "matching_incidents": filtered.head(10).to_dict(orient="records")  # limit to first 10 for performance
+    })
 
 
 
